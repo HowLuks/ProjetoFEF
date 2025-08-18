@@ -52,6 +52,20 @@ export default function Vendas() {
         setProdutos(data);
     };
 
+    const [clientes, setClientes] = useState([]);
+    const [selectedCliente, setSelectedCliente] = useState('');
+
+    useEffect(() => {
+        loadVendas();
+        loadProdutos();
+        loadClientes();
+    }, []);
+
+    const loadClientes = () => {
+        const data = JSON.parse(localStorage.getItem('clientes')) || [];
+        setClientes(data);
+    };
+
     const addToCarrinho = () => {
         if (!selectedProduto || !quantidade) {
             setError('Selecione um produto e quantidade');
@@ -135,7 +149,8 @@ export default function Vendas() {
             produtos: carrinho.map(item => ({ id: item.id, quantidade: item.quantidade })),
             total: calculateTotal(),
             metodoPagamento: formData.metodoPagamento,
-            vendedorId: currentUser.id
+            vendedorId: currentUser.id,
+            clienteId: selectedCliente ? parseInt(selectedCliente) : null
         };
 
         // Atualizar estoque
@@ -195,6 +210,11 @@ export default function Vendas() {
         return produto ? produto.nome : 'Produto não encontrado';
     };
 
+    const getClienteNome = (clienteId) => {
+        const cliente = clientes.find(c => c.id === clienteId);
+        return cliente ? cliente.nome : 'Cliente não encontrado';
+    };
+
     const totalVendas = vendas.length;
     const vendasHoje = vendas.filter(v => v.data === formatDateToDDMMYYYY(getCurrentDateYYYYMMDD())).length;
     const faturamentoTotal = vendas.reduce((sum, v) => sum + v.total, 0);
@@ -227,6 +247,21 @@ export default function Vendas() {
                         <div className="space-y-6">
                             {/* Informações da venda */}
                             <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label>Cliente</Label>
+                                    <Select value={selectedCliente} onValueChange={setSelectedCliente}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Selecione um cliente" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {clientes.map((cliente) => (
+                                                <SelectItem key={cliente.id} value={cliente.id.toString()}>
+                                                    {cliente.nome} - {cliente.cpf}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="data">Data da Venda</Label>
                                     <Input

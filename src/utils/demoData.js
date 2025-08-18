@@ -31,9 +31,9 @@ export function loadDemoData() {
 
     if (localStorage.getItem("vendas") === null) {
         const vendas = [
-            { id: 1, data: "10/08/2025", produtos: [{ id: 1, quantidade: 2 }], total: 59.80, metodoPagamento: "PIX", vendedorId: 1 },
-            { id: 2, data: "11/08/2025", produtos: [{ id: 2, quantidade: 1 }, { id: 4, quantidade: 5 }], total: 139.40, metodoPagamento: "Cartão", vendedorId: 2 },
-            { id: 3, data: "12/08/2025", produtos: [{ id: 3, quantidade: 1 }], total: 149.90, metodoPagamento: "Espécie", vendedorId: 1 }
+            { id: 1, data: "10/08/2025", produtos: [{ id: 1, quantidade: 2 }], total: 59.80, metodoPagamento: "PIX", vendedorId: 1, clienteId: 2 },
+            { id: 2, data: "11/08/2025", produtos: [{ id: 2, quantidade: 1 }, { id: 4, quantidade: 5 }], total: 139.40, metodoPagamento: "Cartão", vendedorId: 2 , clienteId: 1},
+            { id: 3, data: "12/08/2025", produtos: [{ id: 3, quantidade: 1 }], total: 149.90, metodoPagamento: "Espécie", vendedorId: 1, clienteId: 3}
         ];
         localStorage.setItem("vendas", JSON.stringify(vendas));
     }
