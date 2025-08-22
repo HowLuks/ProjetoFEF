@@ -1,8 +1,9 @@
 import React from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import './Sidebar.css';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-const Sidebar = ({ activeModule, setActiveModule }) => {
+const Sidebar = ({ activeModule, setActiveModule, isCollapsed, toggleSidebar }) => {
     const { logout } = useAuth();
 
     const menuItems = [
@@ -22,6 +23,7 @@ const Sidebar = ({ activeModule, setActiveModule }) => {
             group: 'Menu de Cadastro',
             items: [
                 { id: 'clientes', label: 'Clientes' },
+                { id: 'servicos', label: 'Serviços' },
                 { id: 'vendedores', label: 'Usuários' }
             ]
         },
@@ -42,22 +44,25 @@ const Sidebar = ({ activeModule, setActiveModule }) => {
     };
 
     return (
-        <aside className="sidebar">
+        <aside className={`sidebar ${isCollapsed ? 'collapsed' : ''}`}>
             <div className="sidebar-header">
-                <h2>Sistema de Gestão</h2>
+                {!isCollapsed && <h2>Sistema de Gestão</h2>}
+                <button onClick={toggleSidebar} className="toggle-button">
+                    {isCollapsed ? <ChevronRight size={20} /> : <ChevronLeft size={20} />}
+                </button>
             </div>
             <nav className="sidebar-nav">
                 <ul>
                     {menuItems.map((group, groupIndex) => (
                         <React.Fragment key={groupIndex}>
-                            <li className="menu-group-title">{group.group}</li>
+                            {!isCollapsed && <li className="menu-group-title">{group.group}</li>}
                             {group.items.map((item) => (
                                 <li 
                                     key={item.id} 
                                     className={`menu-item ${activeModule === item.id ? 'active' : ''}`}
                                     onClick={() => handleMenuClick(item)}
                                 >
-                                    <a href="#">{item.label}</a>
+                                    <a href="#">{!isCollapsed && item.label}</a>
                                 </li>
                             ))}
                         </React.Fragment>

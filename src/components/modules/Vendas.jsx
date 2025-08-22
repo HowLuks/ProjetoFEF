@@ -28,11 +28,31 @@ export default function Vendas() {
     const [error, setError] = useState('');
     const [buscaCliente, setBuscaCliente] = useState('');
     const [buscaProduto, setBuscaProduto] = useState('');
+    const [usuarios, setUsuarios] = useState([]);
+
+    // Verificar se o usuário atual pode realizar vendas
+    const canUserSell = () => {
+        if (!currentUser) return false;
+        
+        // Buscar dados do usuário no localStorage
+        const usuariosData = JSON.parse(localStorage.getItem('usuarios')) || [];
+        const userData = usuariosData.find(u => u.username === currentUser.username);
+        
+        if (!userData) return false;
+        
+        return userData.role === 'admin' || userData.canSell;
+    };
 
     useEffect(() => {
         loadVendas();
         loadProdutos();
+        loadUsuarios();
     }, []);
+
+    const loadUsuarios = () => {
+        const data = JSON.parse(localStorage.getItem('usuarios')) || [];
+        setUsuarios(data);
+    };
 
     const loadVendas = () => {
         const data = JSON.parse(localStorage.getItem('vendas')) || [];
@@ -466,6 +486,301 @@ export default function Vendas() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold text-blue-600">{vendasHoje}</div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Faturamento Total</CardTitle>
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">
+                            {faturamentoTotal.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Faturamento Hoje</CardTitle>
+                        <CreditCard className="h-4 w-4 text-purple-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-purple-600">
+                            {faturamentoHoje.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
+
+            {/* Tabela de vendas */}
+            <Card>
+                <CardHeader>
+                    <CardTitle>Histórico de Vendas</CardTitle>
+                    <CardDescription>
+                        {vendas.length} venda(s) registrada(s)
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <div className="overflow-x-auto">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>ID</TableHead>
+                                    <TableHead>Data</TableHead>
+                                    <TableHead>Produtos</TableHead>
+                                    <TableHead>Total</TableHead>
+                                    <TableHead>Pagamento</TableHead>
+                                    <TableHead>Vendedor</TableHead>
+                                </TableRow>
+                            </TableHeader>
+                            <TableBody>
+                                {vendas.map((venda) => (
+                                    <TableRow key={venda.id}>
+                                        <TableCell className="font-medium">{venda.id}</TableCell>
+                                        <TableCell>{venda.data}</TableCell>
+                                        <TableCell>
+                                            <div className="space-y-1">
+                                                {venda.produtos.map((produto, index) => (
+                                                    <div key={index} className="text-sm">
+                                                        {getProdutoNome(produto.id)} ({produto.quantidade}x)
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </TableCell>
+                                        <TableCell className="text-green-600 font-medium">
+                                            {venda.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                        </TableCell>
+                                        <TableCell>
+                                            <Badge variant="outline">
+                                                {venda.metodoPagamento}
+                                            </Badge>
+                                        </TableCell>
+                                        <TableCell>{getVendedorNome(venda.vendedorId)}</TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    </div>
+                </CardContent>
+            </Card>
+        </div>
+    );
+
+    // Verificar permissão antes de renderizar o componente
+    if (!canUserSell()) {
+        return (
+            <div className="space-y-6">
+                <div className="text-center py-12">
+                    <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
+                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Acesso Negado</h2>
+                    <p className="text-gray-600">
+                        Você não tem permissão para acessar o módulo de vendas.
+                    </p>
+                    <p className="text-gray-500 mt-2">
+                        Entre em contato com um administrador para solicitar acesso.
+                    </p>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="space-y-6">
+            <div className="flex justify-between items-center">
+                <div>
+                    <h1 className="text-3xl font-bold text-gray-900">Vendas</h1>
+                    <p className="text-gray-600 mt-2">Registre e acompanhe suas vendas</p>
+                </div>
+                <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                    <DialogTrigger asChild>
+                        <Button onClick={resetForm}>
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nova Venda
+                        </Button>
+                    </DialogTrigger>
+                    <DialogContent className="sm:max-w-[600px]">
+                        <DialogHeader>
+                            <DialogTitle>Nova Venda</DialogTitle>
+                            <DialogDescription>
+                                Adicione produtos ao carrinho e finalize a venda
+                            </DialogDescription>
+                        </DialogHeader>
+                        <div className="space-y-4">
+                            {/* Busca de Cliente */}
+                            <div className="space-y-2">
+                                <Label htmlFor="cliente">Cliente</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="cliente"
+                                        value={buscaCliente}
+                                        onChange={(e) => setBuscaCliente(e.target.value)}
+                                        placeholder="Digite o nome ou CPF do cliente..."
+                                    />
+                                    {buscaCliente && (
+                                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                            {clientesFiltrados.map((cliente) => (
+                                                <div
+                                                    key={cliente.id}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                                    onClick={() => {
+                                                        setSelectedCliente(cliente.id);
+                                                        setBuscaCliente(`${cliente.nome} - ${cliente.cpf}`);
+                                                    }}
+                                                >
+                                                    <div className="font-medium">{cliente.nome}</div>
+                                                    <div className="text-sm text-gray-500">{cliente.cpf}</div>
+                                                </div>
+                                            ))}
+                                            {clientesFiltrados.length === 0 && (
+                                                <div className="px-3 py-2 text-gray-500">
+                                                    Nenhum cliente encontrado
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Busca de Produto */}
+                            <div className="space-y-2">
+                                <Label htmlFor="produto">Produto</Label>
+                                <div className="relative">
+                                    <Input
+                                        id="produto"
+                                        value={buscaProduto}
+                                        onChange={(e) => setBuscaProduto(e.target.value)}
+                                        placeholder="Digite o nome do produto..."
+                                    />
+                                    {buscaProduto && (
+                                        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-40 overflow-y-auto">
+                                            {produtosFiltrados.map((produto) => (
+                                                <div
+                                                    key={produto.id}
+                                                    className="px-3 py-2 hover:bg-gray-100 cursor-pointer"
+                                                    onClick={() => {
+                                                        setSelectedProduto(produto.id);
+                                                        setBuscaProduto(produto.nome);
+                                                    }}
+                                                >
+                                                    <div className="font-medium">{produto.nome}</div>
+                                                    <div className="text-sm text-gray-500">
+                                                        Estoque: {produto.quantidade} | Preço: R$ {produto.preco.toFixed(2)}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {produtosFiltrados.length === 0 && (
+                                                <div className="px-3 py-2 text-gray-500">
+                                                    Nenhum produto encontrado
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="quantidade">Quantidade</Label>
+                                    <Input
+                                        id="quantidade"
+                                        type="number"
+                                        min="1"
+                                        value={quantidade}
+                                        onChange={(e) => setQuantidade(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="data">Data</Label>
+                                    <Input
+                                        id="data"
+                                        type="date"
+                                        value={formData.data}
+                                        onChange={(e) => setFormData({...formData, data: e.target.value})}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2">
+                                <Label htmlFor="metodoPagamento">Método de Pagamento</Label>
+                                <Select value={formData.metodoPagamento} onValueChange={(value) => setFormData({...formData, metodoPagamento: value})}>
+                                    <SelectTrigger>
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="PIX">PIX</SelectItem>
+                                        <SelectItem value="Cartão de Crédito">Cartão de Crédito</SelectItem>
+                                        <SelectItem value="Cartão de Débito">Cartão de Débito</SelectItem>
+                                        <SelectItem value="Dinheiro">Dinheiro</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <Button onClick={addToCarrinho} className="w-full">
+                                <Plus className="h-4 w-4 mr-2" />
+                                Adicionar ao Carrinho
+                            </Button>
+
+                            {error && (
+                                <Alert variant="destructive">
+                                    <AlertCircle className="h-4 w-4" />
+                                    <AlertDescription>{error}</AlertDescription>
+                                </Alert>
+                            )}
+
+                            {/* Carrinho */}
+                            {carrinho.length > 0 && (
+                                <div className="space-y-4">
+                                    <h3 className="text-lg font-semibold">Carrinho</h3>
+                                    <div className="space-y-2">
+                                        {carrinho.map((item, index) => (
+                                            <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded">
+                                                <div>
+                                                    <span className="font-medium">{item.nome}</span>
+                                                    <span className="text-gray-500 ml-2">({item.quantidade}x)</span>
+                                                </div>
+                                                <div className="flex items-center space-x-2">
+                                                    <span className="font-medium">
+                                                        R$ {(item.preco * item.quantidade).toFixed(2)}
+                                                    </span>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
+                                                        onClick={() => removeFromCarrinho(index)}
+                                                    >
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="flex justify-between items-center pt-4 border-t">
+                                        <span className="text-lg font-semibold">Total:</span>
+                                        <span className="text-lg font-bold text-green-600">
+                                            R$ {getTotal().toFixed(2)}
+                                        </span>
+                                    </div>
+                                    <Button onClick={finalizarVenda} className="w-full">
+                                        <ShoppingCart className="h-4 w-4 mr-2" />
+                                        Finalizar Venda
+                                    </Button>
+                                </div>
+                            )}
+                        </div>
+                    </DialogContent>
+                </Dialog>
+            </div>
+
+            {/* Cards de resumo */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Total de Vendas</CardTitle>
+                        <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold">{vendas.length}</div>
                     </CardContent>
                 </Card>
 

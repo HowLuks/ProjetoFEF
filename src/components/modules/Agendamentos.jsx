@@ -13,6 +13,7 @@ import '../../App.css';
 const Agendamentos = () => {
     const [agendamentos, setAgendamentos] = useState([]);
     const [clientes, setClientes] = useState([]);
+    const [servicos, setServicos] = useState([]);
     const [filtros, setFiltros] = useState({
         cliente: '',
         data: '',
@@ -42,13 +43,17 @@ const Agendamentos = () => {
         const clientesSalvos = JSON.parse(localStorage.getItem('clientes')) || [];
         setClientes(clientesSalvos);
 
+        // Carregar serviços do localStorage
+        const servicosSalvos = JSON.parse(localStorage.getItem('servicos')) || [];
+        setServicos(servicosSalvos);
+
         // Se não houver agendamentos, criar alguns de demonstração
         if (agendamentosSalvos.length === 0) {
             const agendamentosDemo = [
                 {
                     id: 1,
                     cliente: 'João Silva',
-                    servico: 'Consulta',
+                    servico: 'Consulta Médica',
                     data: '2025-08-14',
                     hora: '09:00',
                     observacoes: 'Primeira consulta',
@@ -57,7 +62,7 @@ const Agendamentos = () => {
                 {
                     id: 2,
                     cliente: 'Maria Santos',
-                    servico: 'Reunião',
+                    servico: 'Exame de Rotina',
                     data: '2025-08-14',
                     hora: '14:30',
                     observacoes: 'Discussão sobre projeto',
@@ -66,7 +71,7 @@ const Agendamentos = () => {
                 {
                     id: 3,
                     cliente: 'Pedro Costa',
-                    servico: 'Atendimento',
+                    servico: 'Fisioterapia',
                     data: '2025-08-15',
                     hora: '10:00',
                     observacoes: '',
@@ -78,10 +83,69 @@ const Agendamentos = () => {
         }
     };
 
+    const verificarConflito = (novoAgend, servicoSelecionado) => {
+        // Converter horário para minutos para facilitar cálculos
+        const horaParaMinutos = (hora) => {
+            const [h, m] = hora.split(':').map(Number);
+            return h * 60 + m;
+        };
+
+        // Converter minutos de volta para horário
+        const minutosParaHora = (minutos) => {
+            const h = Math.floor(minutos / 60);
+            const m = minutos % 60;
+            return `${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}`;
+        };
+
+        const novoInicio = horaParaMinutos(novoAgend.hora);
+        const novoFim = novoInicio + servicoSelecionado.duracao;
+
+        // Verificar conflitos com agendamentos existentes
+        for (const agendamento of agendamentos) {
+            // Pular se for o mesmo agendamento sendo editado
+            if (editandoId && agendamento.id === editandoId) {
+                continue;
+            }
+
+            // Verificar se é o mesmo serviço, mesmo profissional e mesma data
+            if (agendamento.servico === novoAgend.servico && 
+                agendamento.data === novoAgend.data &&
+                agendamento.status !== 'cancelado') {
+                
+                const servicoExistente = servicos.find(s => s.nome === agendamento.servico);
+                if (servicoExistente && servicoExistente.profissional === servicoSelecionado.profissional) {
+                    const existenteInicio = horaParaMinutos(agendamento.hora);
+                    const existenteFim = existenteInicio + servicoExistente.duracao;
+
+                    // Verificar sobreposição de horários
+                    if ((novoInicio < existenteFim && novoFim > existenteInicio)) {
+                        return {
+                            data: agendamento.data,
+                            hora: agendamento.hora,
+                            servico: agendamento.servico
+                        };
+                    }
+                }
+            }
+        }
+
+        return null;
+    };
+
     const salvarAgendamento = () => {
         if (!novoAgendamento.cliente || !novoAgendamento.servico || !novoAgendamento.data || !novoAgendamento.hora) {
             alert('Por favor, preencha todos os campos obrigatórios.');
             return;
+        }
+
+        // Validação de conflito de agendamento
+        const servicoSelecionado = servicos.find(s => s.nome === novoAgendamento.servico);
+        if (servicoSelecionado) {
+            const conflito = verificarConflito(novoAgendamento, servicoSelecionado);
+            if (conflito) {
+                alert(`Conflito de agendamento detectado! O profissional ${servicoSelecionado.profissional} já possui um agendamento do serviço "${novoAgendamento.servico}" no horário ${conflito.hora} do dia ${formatDateToDDMMYYYY(conflito.data)}.`);
+                return;
+            }
         }
 
         let agendamentosAtualizados;
@@ -138,7 +202,7 @@ const Agendamentos = () => {
     const agendamentosFiltrados = agendamentos.filter(agendamento => {
         const matchCliente = !filtros.cliente || agendamento.cliente.toLowerCase().includes(filtros.cliente.toLowerCase());
         const matchData = !filtros.data || agendamento.data === filtros.data;
-        const matchStatus = !filtros.status || agendamento.status === filtros.status;
+        const matchStatus = !filtros.status || filtros.status === 'todos' || agendamento.status === filtros.status;
         return matchCliente && matchData && matchStatus;
     });
 
@@ -266,7 +330,7 @@ const Agendamentos = () => {
                                     <SelectValue placeholder="Todos os status" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    <SelectItem value="">Todos</SelectItem>
+                                    <SelectItem value="todos">Todos</SelectItem>
                                     <SelectItem value="agendado">Agendado</SelectItem>
                                     <SelectItem value="confirmado">Confirmado</SelectItem>
                                     <SelectItem value="cancelado">Cancelado</SelectItem>
@@ -307,12 +371,18 @@ const Agendamentos = () => {
                             </div>
                             <div>
                                 <Label htmlFor="servico">Serviço *</Label>
-                                <Input
-                                    id="servico"
-                                    placeholder="Tipo de serviço"
-                                    value={novoAgendamento.servico}
-                                    onChange={(e) => setNovoAgendamento({ ...novoAgendamento, servico: e.target.value })}
-                                />
+                                <Select value={novoAgendamento.servico} onValueChange={(value) => setNovoAgendamento({ ...novoAgendamento, servico: value })}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Selecione um serviço" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {servicos.map((servico) => (
+                                            <SelectItem key={servico.id} value={servico.nome}>
+                                                {servico.nome} - {servico.duracao}min - {servico.profissional}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
                             </div>
                             <div>
                                 <Label htmlFor="data">Data *</Label>

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { 
-    DollarSign, 
-    Package, 
-    TrendingUp, 
-    BarChart3, 
-    Users, 
-    ShoppingCart, 
+import {
+    DollarSign,
+    Package,
+    TrendingUp,
+    BarChart3,
+    Users,
+    ShoppingCart,
     Calendar
 } from 'lucide-react';
 import FluxoCaixa from './modules/FluxoCaixa';
@@ -17,6 +17,7 @@ import Graficos from './modules/Graficos';
 import Clientes from './modules/Clientes';
 import Vendas from './modules/Vendas';
 import Agendamentos from './modules/Agendamentos';
+import Servicos from './modules/Servicos';
 import Vendedores from './modules/Vendedores';
 import Sidebar from './Sidebar';
 import '../App.css';
@@ -125,6 +126,11 @@ function DashboardHome({ currentUser, setActiveModule }) {
 export default function Dashboard() {
     const { currentUser } = useAuth();
     const [activeModule, setActiveModule] = useState('dashboard');
+    const [isCollapsed, setIsCollapsed] = useState(false);
+
+    const toggleSidebar = () => {
+        setIsCollapsed(!isCollapsed);
+    };
 
     const renderContent = () => {
         switch (activeModule) {
@@ -142,6 +148,8 @@ export default function Dashboard() {
                 return <Vendas />;
             case 'agendamentos':
                 return <Agendamentos />;
+            case 'servicos':
+                return <Servicos />;
             case 'vendedores':
                 return <Vendedores />;
             default:
@@ -151,8 +159,8 @@ export default function Dashboard() {
 
     return (
         <div className="flex min-h-screen bg-gray-50">
-            <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} />
-            <main className="main-content flex-1 p-6">
+            <Sidebar activeModule={activeModule} setActiveModule={setActiveModule} isCollapsed={isCollapsed} toggleSidebar={toggleSidebar} />
+            <main className={`main-content flex-1 p-6 ${isCollapsed ? 'collapsed' : ''}`}>
                 {renderContent()}
             </main>
         </div>

@@ -8,33 +8,55 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UserCheck, Plus, Edit, Trash2, Shield, User, AlertCircle } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { UserCheck, Plus, Edit, Trash2, Shield, User, AlertCircle, Stethoscope, ShoppingCart, Calendar } from 'lucide-react';
 import '../../App.css';
 
 export default function Vendedores() {
-    const [vendedores, setVendedores] = useState([]);
+    const [usuarios, setUsuarios] = useState([]);
     const [formData, setFormData] = useState({
         username: '',
         password: '',
         confirmPassword: '',
-        role: 'vendedor'
+        role: 'vendedor',
+        canSell: true,
+        canProvideServices: false,
+        specialization: ''
     });
     const [editingId, setEditingId] = useState(null);
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [errors, setErrors] = useState({});
 
     useEffect(() => {
-        loadVendedores();
+        loadUsuarios();
+        migrateOldData();
     }, []);
 
-    const loadVendedores = () => {
-        const data = JSON.parse(localStorage.getItem('vendedores')) || [];
-        setVendedores(data);
+    const migrateOldData = () => {
+        // Migrar dados antigos de vendedores para usuarios
+        const oldVendedores = JSON.parse(localStorage.getItem('vendedores')) || [];
+        const existingUsuarios = JSON.parse(localStorage.getItem('usuarios')) || [];
+        
+        if (oldVendedores.length > 0 && existingUsuarios.length === 0) {
+            const migratedUsuarios = oldVendedores.map(vendedor => ({
+                ...vendedor,
+                canSell: true,
+                canProvideServices: false,
+                specialization: ''
+            }));
+            localStorage.setItem('usuarios', JSON.stringify(migratedUsuarios));
+            setUsuarios(migratedUsuarios);
+        }
     };
 
-    const saveVendedores = (data) => {
-        localStorage.setItem('vendedores', JSON.stringify(data));
-        setVendedores(data);
+    const loadUsuarios = () => {
+        const data = JSON.parse(localStorage.getItem('usuarios')) || [];
+        setUsuarios(data);
+    };
+
+    const saveUsuarios = (data) => {
+        localStorage.setItem('usuarios', JSON.stringify(data));
+        setUsuarios(data);
     };
 
     const validateForm = () => {
@@ -46,7 +68,7 @@ export default function Vendedores() {
             newErrors.username = 'Nome de usuário deve ter pelo menos 3 caracteres';
         } else {
             // Verificar se username já existe (exceto quando editando)
-            const existingUser = vendedores.find(v => v.username === formData.username && v.id !== editingId);
+            const existingUser = usuarios.find(u => u.username === formData.username && u.id !== editingId);
             if (existingUser) {
                 newErrors.username = 'Este nome de usuário já está em uso';
             }
@@ -71,6 +93,16 @@ export default function Vendedores() {
             }
         }
 
+        // Validar se pelo menos uma permissão foi selecionada
+        if (!formData.canSell && !formData.canProvideServices && formData.role !== 'admin') {
+            newErrors.permissions = 'Selecione pelo menos uma permissão (vendas ou serviços)';
+        }
+
+        // Validar especialização se pode fornecer serviços
+        if (formData.canProvideServices && !formData.specialization.trim()) {
+            newErrors.specialization = 'Especialização é obrigatória para profissionais que prestam serviços';
+        }
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -80,7 +112,10 @@ export default function Vendedores() {
             username: '',
             password: '',
             confirmPassword: '',
-            role: 'vendedor'
+            role: 'vendedor',
+            canSell: true,
+            canProvideServices: false,
+            specialization: ''
         });
         setEditingId(null);
         setErrors({});
@@ -91,95 +126,123 @@ export default function Vendedores() {
         
         if (!validateForm()) return;
 
-        const vendedorData = {
+        const userData = {
             username: formData.username,
-            role: formData.role
+            role: formData.role,
+            canSell: formData.role === 'admin' ? true : formData.canSell,
+            canProvideServices: formData.role === 'admin' ? true : formData.canProvideServices,
+            specialization: formData.canProvideServices ? formData.specialization : ''
         };
 
         // Incluir senha apenas se foi fornecida
         if (formData.password) {
-            vendedorData.password = formData.password;
+            userData.password = formData.password;
         }
 
-        let updatedVendedores;
+        let updatedUsuarios;
         
         if (editingId) {
-            updatedVendedores = vendedores.map(vendedor => 
-                vendedor.id === editingId 
-                    ? { ...vendedor, ...vendedorData }
-                    : vendedor
+            updatedUsuarios = usuarios.map(usuario => 
+                usuario.id === editingId 
+                    ? { ...usuario, ...userData }
+                    : usuario
             );
         } else {
-            const newId = vendedores.length > 0 ? Math.max(...vendedores.map(v => v.id)) + 1 : 1;
-            updatedVendedores = [...vendedores, { id: newId, ...vendedorData, password: formData.password }];
+            const newId = usuarios.length > 0 ? Math.max(...usuarios.map(u => u.id)) + 1 : 1;
+            updatedUsuarios = [...usuarios, { id: newId, ...userData, password: formData.password }];
         }
         
-        saveVendedores(updatedVendedores);
+        saveUsuarios(updatedUsuarios);
         resetForm();
         setIsDialogOpen(false);
     };
 
-    const handleEdit = (vendedor) => {
+    const handleEdit = (usuario) => {
         setFormData({
-            username: vendedor.username,
+            username: usuario.username,
             password: '',
             confirmPassword: '',
-            role: vendedor.role
+            role: usuario.role,
+            canSell: usuario.canSell || false,
+            canProvideServices: usuario.canProvideServices || false,
+            specialization: usuario.specialization || ''
         });
-        setEditingId(vendedor.id);
+        setEditingId(usuario.id);
         setIsDialogOpen(true);
     };
 
     const handleDelete = (id) => {
-        const vendedor = vendedores.find(v => v.id === id);
+        const usuario = usuarios.find(u => u.id === id);
         
         // Não permitir excluir se for o último admin
-        if (vendedor.role === 'admin') {
-            const admins = vendedores.filter(v => v.role === 'admin');
+        if (usuario.role === 'admin') {
+            const admins = usuarios.filter(u => u.role === 'admin');
             if (admins.length === 1) {
                 alert('Não é possível excluir o último administrador do sistema.');
                 return;
             }
         }
 
-        if (confirm(`Tem certeza que deseja excluir o usuário "${vendedor.username}"?`)) {
-            const updatedVendedores = vendedores.filter(vendedor => vendedor.id !== id);
-            saveVendedores(updatedVendedores);
+        if (confirm(`Tem certeza que deseja excluir o usuário "${usuario.username}"?`)) {
+            const updatedUsuarios = usuarios.filter(usuario => usuario.id !== id);
+            saveUsuarios(updatedUsuarios);
         }
     };
 
-    const getVendasPorVendedor = () => {
+    const getVendasPorUsuario = () => {
         const vendas = JSON.parse(localStorage.getItem('vendas')) || [];
-        const vendasPorVendedor = {};
+        const vendasPorUsuario = {};
         
-        vendedores.forEach(vendedor => {
-            vendasPorVendedor[vendedor.id] = {
+        usuarios.forEach(usuario => {
+            vendasPorUsuario[usuario.id] = {
                 quantidade: 0,
                 total: 0
             };
         });
 
         vendas.forEach(venda => {
-            if (vendasPorVendedor[venda.vendedorId]) {
-                vendasPorVendedor[venda.vendedorId].quantidade += 1;
-                vendasPorVendedor[venda.vendedorId].total += venda.total;
+            if (vendasPorUsuario[venda.vendedorId]) {
+                vendasPorUsuario[venda.vendedorId].quantidade += 1;
+                vendasPorUsuario[venda.vendedorId].total += venda.total;
             }
         });
 
-        return vendasPorVendedor;
+        return vendasPorUsuario;
     };
 
-    const vendasPorVendedor = getVendasPorVendedor();
-    const totalVendedores = vendedores.length;
-    const totalAdmins = vendedores.filter(v => v.role === 'admin').length;
-    const totalVendedoresAtivos = vendedores.filter(v => v.role === 'vendedor').length;
+    const getAgendamentosPorUsuario = () => {
+        const agendamentos = JSON.parse(localStorage.getItem('agendamentos')) || [];
+        const agendamentosPorUsuario = {};
+        
+        usuarios.forEach(usuario => {
+            agendamentosPorUsuario[usuario.id] = 0;
+        });
+
+        agendamentos.forEach(agendamento => {
+            // Buscar o serviço para encontrar o profissional responsável
+            const servicos = JSON.parse(localStorage.getItem('servicos')) || [];
+            const servico = servicos.find(s => s.id === agendamento.servicoId);
+            if (servico && servico.profissionalId) {
+                agendamentosPorUsuario[servico.profissionalId] = (agendamentosPorUsuario[servico.profissionalId] || 0) + 1;
+            }
+        });
+
+        return agendamentosPorUsuario;
+    };
+
+    const vendasPorUsuario = getVendasPorUsuario();
+    const agendamentosPorUsuario = getAgendamentosPorUsuario();
+    const totalUsuarios = usuarios.length;
+    const totalAdmins = usuarios.filter(u => u.role === 'admin').length;
+    const totalVendedores = usuarios.filter(u => u.canSell && u.role !== 'admin').length;
+    const totalProfissionais = usuarios.filter(u => u.canProvideServices && u.role !== 'admin').length;
 
     return (
         <div className="space-y-6">
             <div className="flex justify-between items-center">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900">Contas de Vendedores</h1>
-                    <p className="text-gray-600 mt-2">Gerencie usuários e permissões do sistema</p>
+                    <h1 className="text-3xl font-bold text-gray-900">Usuários e Profissionais</h1>
+                    <p className="text-gray-600 mt-2">Gerencie usuários, vendedores e profissionais do sistema</p>
                 </div>
                 <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
@@ -188,15 +251,15 @@ export default function Vendedores() {
                             Novo Usuário
                         </Button>
                     </DialogTrigger>
-                    <DialogContent className="sm:max-w-[425px]">
+                    <DialogContent className="sm:max-w-[500px]">
                         <DialogHeader>
                             <DialogTitle>
                                 {editingId ? 'Editar Usuário' : 'Novo Usuário'}
                             </DialogTitle>
                             <DialogDescription>
                                 {editingId 
-                                    ? 'Edite as informações do usuário. Deixe a senha em branco para mantê-la inalterada.'
-                                    : 'Adicione um novo usuário ao sistema'
+                                    ? 'Edite as informações do usuário e suas permissões.'
+                                    : 'Adicione um novo usuário ao sistema com as permissões adequadas'
                                 }
                             </DialogDescription>
                         </DialogHeader>
@@ -224,11 +287,65 @@ export default function Vendedores() {
                                         <SelectValue />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="vendedor">Vendedor</SelectItem>
+                                        <SelectItem value="vendedor">Usuário</SelectItem>
                                         <SelectItem value="admin">Administrador</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
+
+                            {formData.role !== 'admin' && (
+                                <div className="space-y-3">
+                                    <Label>Permissões *</Label>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id="canSell"
+                                                checked={formData.canSell}
+                                                onCheckedChange={(checked) => setFormData({...formData, canSell: checked})}
+                                            />
+                                            <Label htmlFor="canSell" className="flex items-center">
+                                                <ShoppingCart className="h-4 w-4 mr-2" />
+                                                Pode realizar vendas
+                                            </Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id="canProvideServices"
+                                                checked={formData.canProvideServices}
+                                                onCheckedChange={(checked) => setFormData({...formData, canProvideServices: checked})}
+                                            />
+                                            <Label htmlFor="canProvideServices" className="flex items-center">
+                                                <Calendar className="h-4 w-4 mr-2" />
+                                                Pode prestar serviços
+                                            </Label>
+                                        </div>
+                                    </div>
+                                    {errors.permissions && (
+                                        <Alert variant="destructive">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertDescription>{errors.permissions}</AlertDescription>
+                                        </Alert>
+                                    )}
+                                </div>
+                            )}
+
+                            {formData.canProvideServices && (
+                                <div className="space-y-2">
+                                    <Label htmlFor="specialization">Especialização *</Label>
+                                    <Input
+                                        id="specialization"
+                                        value={formData.specialization}
+                                        onChange={(e) => setFormData({...formData, specialization: e.target.value})}
+                                        placeholder="Ex: Cardiologia, Fisioterapia, Psicologia..."
+                                    />
+                                    {errors.specialization && (
+                                        <Alert variant="destructive">
+                                            <AlertCircle className="h-4 w-4" />
+                                            <AlertDescription>{errors.specialization}</AlertDescription>
+                                        </Alert>
+                                    )}
+                                </div>
+                            )}
 
                             <div className="space-y-2">
                                 <Label htmlFor="password">
@@ -282,14 +399,14 @@ export default function Vendedores() {
             </div>
 
             {/* Cards de resumo */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Total de Usuários</CardTitle>
                         <UserCheck className="h-4 w-4 text-muted-foreground" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold">{totalVendedores}</div>
+                        <div className="text-2xl font-bold">{totalUsuarios}</div>
                     </CardContent>
                 </Card>
 
@@ -306,10 +423,20 @@ export default function Vendedores() {
                 <Card>
                     <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                         <CardTitle className="text-sm font-medium">Vendedores</CardTitle>
-                        <User className="h-4 w-4 text-blue-600" />
+                        <ShoppingCart className="h-4 w-4 text-blue-600" />
                     </CardHeader>
                     <CardContent>
-                        <div className="text-2xl font-bold text-blue-600">{totalVendedoresAtivos}</div>
+                        <div className="text-2xl font-bold text-blue-600">{totalVendedores}</div>
+                    </CardContent>
+                </Card>
+
+                <Card>
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                        <CardTitle className="text-sm font-medium">Profissionais</CardTitle>
+                        <Stethoscope className="h-4 w-4 text-green-600" />
+                    </CardHeader>
+                    <CardContent>
+                        <div className="text-2xl font-bold text-green-600">{totalProfissionais}</div>
                     </CardContent>
                 </Card>
             </div>
@@ -319,7 +446,7 @@ export default function Vendedores() {
                 <CardHeader>
                     <CardTitle>Usuários do Sistema</CardTitle>
                     <CardDescription>
-                        {vendedores.length} usuário(s) cadastrado(s)
+                        {usuarios.length} usuário(s) cadastrado(s)
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -330,54 +457,82 @@ export default function Vendedores() {
                                     <TableHead>ID</TableHead>
                                     <TableHead>Usuário</TableHead>
                                     <TableHead>Tipo</TableHead>
+                                    <TableHead>Permissões</TableHead>
+                                    <TableHead>Especialização</TableHead>
                                     <TableHead>Vendas</TableHead>
-                                    <TableHead>Faturamento</TableHead>
+                                    <TableHead>Agendamentos</TableHead>
                                     <TableHead>Ações</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
-                                {vendedores.map((vendedor) => {
-                                    const vendas = vendasPorVendedor[vendedor.id] || { quantidade: 0, total: 0 };
+                                {usuarios.map((usuario) => {
+                                    const vendas = vendasPorUsuario[usuario.id] || { quantidade: 0, total: 0 };
+                                    const agendamentos = agendamentosPorUsuario[usuario.id] || 0;
                                     
                                     return (
-                                        <TableRow key={vendedor.id}>
-                                            <TableCell className="font-medium">{vendedor.id}</TableCell>
-                                            <TableCell>{vendedor.username}</TableCell>
+                                        <TableRow key={usuario.id}>
+                                            <TableCell className="font-medium">{usuario.id}</TableCell>
+                                            <TableCell>{usuario.username}</TableCell>
                                             <TableCell>
-                                                <Badge variant={vendedor.role === 'admin' ? 'destructive' : 'default'}>
-                                                    {vendedor.role === 'admin' ? (
+                                                <Badge variant={usuario.role === 'admin' ? 'destructive' : 'default'}>
+                                                    {usuario.role === 'admin' ? (
                                                         <>
                                                             <Shield className="h-3 w-3 mr-1" />
-                                                            Administrador
+                                                            Admin
                                                         </>
                                                     ) : (
                                                         <>
                                                             <User className="h-3 w-3 mr-1" />
-                                                            Vendedor
+                                                            Usuário
                                                         </>
                                                     )}
                                                 </Badge>
                                             </TableCell>
                                             <TableCell>
-                                                <span className="font-medium">{vendas.quantidade}</span> vendas
+                                                <div className="flex gap-1">
+                                                    {(usuario.canSell || usuario.role === 'admin') && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            <ShoppingCart className="h-3 w-3 mr-1" />
+                                                            Vendas
+                                                        </Badge>
+                                                    )}
+                                                    {(usuario.canProvideServices || usuario.role === 'admin') && (
+                                                        <Badge variant="outline" className="text-xs">
+                                                            <Calendar className="h-3 w-3 mr-1" />
+                                                            Serviços
+                                                        </Badge>
+                                                    )}
+                                                </div>
                                             </TableCell>
-                                            <TableCell className="text-green-600 font-medium">
-                                                {vendas.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                            <TableCell>
+                                                {usuario.specialization || '-'}
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm">
+                                                    <div>{vendas.quantidade} vendas</div>
+                                                    <div className="text-muted-foreground">
+                                                        R$ {vendas.total.toFixed(2)}
+                                                    </div>
+                                                </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                <div className="text-sm">
+                                                    {agendamentos} agendamentos
+                                                </div>
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex space-x-2">
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => handleEdit(vendedor)}
+                                                        onClick={() => handleEdit(usuario)}
                                                     >
                                                         <Edit className="h-4 w-4" />
                                                     </Button>
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
-                                                        onClick={() => handleDelete(vendedor.id)}
-                                                        disabled={vendedor.role === 'admin' && totalAdmins === 1}
+                                                        onClick={() => handleDelete(usuario.id)}
                                                     >
                                                         <Trash2 className="h-4 w-4" />
                                                     </Button>
@@ -388,33 +543,6 @@ export default function Vendedores() {
                                 })}
                             </TableBody>
                         </Table>
-                    </div>
-                </CardContent>
-            </Card>
-
-            {/* Informações importantes */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Informações Importantes</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-2">
-                    <div className="flex items-start space-x-2">
-                        <Shield className="h-4 w-4 text-red-600 mt-0.5" />
-                        <p className="text-sm text-gray-600">
-                            <strong>Administradores</strong> têm acesso completo ao sistema, incluindo este módulo de gerenciamento de usuários.
-                        </p>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                        <User className="h-4 w-4 text-blue-600 mt-0.5" />
-                        <p className="text-sm text-gray-600">
-                            <strong>Vendedores</strong> têm acesso aos módulos de vendas, estoque, clientes e relatórios básicos.
-                        </p>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                        <AlertCircle className="h-4 w-4 text-yellow-600 mt-0.5" />
-                        <p className="text-sm text-gray-600">
-                            O sistema deve ter pelo menos um administrador. Não é possível excluir o último admin.
-                        </p>
                     </div>
                 </CardContent>
             </Card>
