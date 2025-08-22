@@ -504,4 +504,3 @@ export default function Vendas() {
         </div>
     );
 }
-
