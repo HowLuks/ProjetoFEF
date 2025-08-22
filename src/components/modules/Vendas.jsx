@@ -26,6 +26,8 @@ export default function Vendas() {
     const [selectedProduto, setSelectedProduto] = useState('');
     const [quantidade, setQuantidade] = useState('1');
     const [error, setError] = useState('');
+    const [buscaCliente, setBuscaCliente] = useState('');
+    const [buscaProduto, setBuscaProduto] = useState('');
 
     useEffect(() => {
         loadVendas();
@@ -196,6 +198,9 @@ export default function Vendas() {
         });
         setSelectedProduto('');
         setQuantidade('1');
+        setSelectedCliente('');
+        setBuscaCliente('');
+        setBuscaProduto('');
         setError('');
     };
 
@@ -214,6 +219,17 @@ export default function Vendas() {
         const cliente = clientes.find(c => c.id === clienteId);
         return cliente ? cliente.nome : 'Cliente não encontrado';
     };
+
+    // Filtros para busca
+    const clientesFiltrados = clientes.filter(cliente => 
+        cliente.nome.toLowerCase().includes(buscaCliente.toLowerCase()) ||
+        cliente.cpf.includes(buscaCliente)
+    );
+
+    const produtosFiltrados = produtos.filter(produto => 
+        produto.nome.toLowerCase().includes(buscaProduto.toLowerCase()) &&
+        produto.quantidade > 0
+    );
 
     const totalVendas = vendas.length;
     const vendasHoje = vendas.filter(v => v.data === formatDateToDDMMYYYY(getCurrentDateYYYYMMDD())).length;
@@ -249,18 +265,32 @@ export default function Vendas() {
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                     <Label>Cliente</Label>
-                                    <Select value={selectedCliente} onValueChange={setSelectedCliente}>
-                                        <SelectTrigger>
-                                            <SelectValue placeholder="Selecione um cliente" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {clientes.map((cliente) => (
-                                                <SelectItem key={cliente.id} value={cliente.id.toString()}>
-                                                    {cliente.nome} - {cliente.cpf}
-                                                </SelectItem>
-                                            ))}
-                                        </SelectContent>
-                                    </Select>
+                                    <div className="space-y-2">
+                                        <Input
+                                            placeholder="Buscar cliente por nome ou CPF..."
+                                            value={buscaCliente}
+                                            onChange={(e) => setBuscaCliente(e.target.value)}
+                                        />
+                                        {buscaCliente && (
+                                            <Select value={selectedCliente} onValueChange={setSelectedCliente}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Selecione um cliente" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {clientesFiltrados.map((cliente) => (
+                                                        <SelectItem key={cliente.id} value={cliente.id.toString()}>
+                                                            {cliente.nome} - {cliente.cpf}
+                                                        </SelectItem>
+                                                    ))}
+                                                    {clientesFiltrados.length === 0 && (
+                                                        <SelectItem value="" disabled>
+                                                            Nenhum cliente encontrado
+                                                        </SelectItem>
+                                                    )}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="space-y-2">
                                     <Label htmlFor="data">Data da Venda</Label>
@@ -294,18 +324,32 @@ export default function Vendas() {
                                 <div className="grid grid-cols-3 gap-4 items-end">
                                     <div className="space-y-2">
                                         <Label>Produto</Label>
-                                        <Select value={selectedProduto} onValueChange={setSelectedProduto}>
-                                            <SelectTrigger>
-                                                <SelectValue placeholder="Selecione um produto" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {produtos.filter(p => p.quantidade > 0).map(produto => (
-                                                    <SelectItem key={produto.id} value={produto.id.toString()}>
-                                                        {produto.nome} - {produto.precoUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (Estoque: {produto.quantidade})
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
+                                        <div className="space-y-2">
+                                            <Input
+                                                placeholder="Buscar produto por nome..."
+                                                value={buscaProduto}
+                                                onChange={(e) => setBuscaProduto(e.target.value)}
+                                            />
+                                            {buscaProduto && (
+                                                <Select value={selectedProduto} onValueChange={setSelectedProduto}>
+                                                    <SelectTrigger>
+                                                        <SelectValue placeholder="Selecione um produto" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        {produtosFiltrados.map(produto => (
+                                                            <SelectItem key={produto.id} value={produto.id.toString()}>
+                                                                {produto.nome} - {produto.precoUnitario.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} (Estoque: {produto.quantidade})
+                                                            </SelectItem>
+                                                        ))}
+                                                        {produtosFiltrados.length === 0 && (
+                                                            <SelectItem value="" disabled>
+                                                                Nenhum produto encontrado
+                                                            </SelectItem>
+                                                        )}
+                                                    </SelectContent>
+                                                </Select>
+                                            )}
+                                        </div>
                                     </div>
 
                                     <div className="space-y-2">

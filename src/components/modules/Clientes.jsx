@@ -8,12 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Users, Plus, Edit, Trash2, UserCheck, AlertCircle } from 'lucide-react';
+import { Users, Plus, Edit, Trash2, UserCheck, AlertCircle, ShoppingBag, Eye } from 'lucide-react';
 import { formatDateToDDMMYYYY, formatDateToYYYYMMDD } from '../../utils/dateUtils';
 import '../../App.css';
 
 export default function Clientes() {
     const [clientes, setClientes] = useState([]);
+    const [vendas, setVendas] = useState([]);
+    const [produtos, setProdutos] = useState([]);
+    const [comprasDialogOpen, setComprasDialogOpen] = useState(false);
+    const [clienteSelecionado, setClienteSelecionado] = useState(null);
     const [formData, setFormData] = useState({
         nome: '',
         cpf: '',
@@ -30,11 +34,23 @@ export default function Clientes() {
 
     useEffect(() => {
         loadClientes();
+        loadVendas();
+        loadProdutos();
     }, []);
 
     const loadClientes = () => {
         const data = JSON.parse(localStorage.getItem('clientes')) || [];
         setClientes(data);
+    };
+
+    const loadVendas = () => {
+        const data = JSON.parse(localStorage.getItem('vendas')) || [];
+        setVendas(data);
+    };
+
+    const loadProdutos = () => {
+        const data = JSON.parse(localStorage.getItem('produtos')) || [];
+        setProdutos(data);
     };
 
     const saveClientes = (data) => {
@@ -200,6 +216,25 @@ export default function Clientes() {
             const updatedClientes = clientes.filter(cliente => cliente.id !== id);
             saveClientes(updatedClientes);
         }
+    };
+
+    const handleViewCompras = (cliente) => {
+        setClienteSelecionado(cliente);
+        setComprasDialogOpen(true);
+    };
+
+    const getComprasCliente = (clienteId) => {
+        return vendas.filter(venda => venda.clienteId === clienteId);
+    };
+
+    const getProdutoNome = (produtoId) => {
+        const produto = produtos.find(p => p.id === produtoId);
+        return produto ? produto.nome : 'Produto não encontrado';
+    };
+
+    const getProdutoPreco = (produtoId) => {
+        const produto = produtos.find(p => p.id === produtoId);
+        return produto ? produto.precoUnitario : 0;
     };
 
     const handleCPFChange = (value, field) => {
@@ -487,6 +522,14 @@ export default function Clientes() {
                                                     <Button
                                                         variant="outline"
                                                         size="sm"
+                                                        onClick={() => handleViewCompras(cliente)}
+                                                        title="Ver compras"
+                                                    >
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        size="sm"
                                                         onClick={() => handleEdit(cliente)}
                                                     >
                                                         <Edit className="h-4 w-4" />
@@ -508,6 +551,145 @@ export default function Clientes() {
                     </div>
                 </CardContent>
             </Card>
+
+            {/* Modal para visualizar compras do cliente */}
+            <Dialog open={comprasDialogOpen} onOpenChange={setComprasDialogOpen}>
+                <DialogContent className="sm:max-w-[800px] max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2">
+                            <ShoppingBag className="h-5 w-5" />
+                            Compras de {clienteSelecionado?.nome}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Histórico de compras do cliente
+                        </DialogDescription>
+                    </DialogHeader>
+                    
+                    {clienteSelecionado && (
+                        <div className="space-y-4">
+                            {/* Informações do cliente */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Informações do Cliente</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="grid grid-cols-2 gap-4 text-sm">
+                                        <div><strong>Nome:</strong> {clienteSelecionado.nome}</div>
+                                        <div><strong>CPF:</strong> {clienteSelecionado.cpf}</div>
+                                        <div><strong>Email:</strong> {clienteSelecionado.email}</div>
+                                        <div><strong>Telefone:</strong> {clienteSelecionado.telefone}</div>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            {/* Lista de compras */}
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle className="text-lg">Histórico de Compras</CardTitle>
+                                </CardHeader>
+                                <CardContent>
+                                    {(() => {
+                                        const compras = getComprasCliente(clienteSelecionado.id);
+                                        
+                                        if (compras.length === 0) {
+                                            return (
+                                                <div className="text-center py-8 text-gray-500">
+                                                    <ShoppingBag className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                                    <p>Este cliente ainda não realizou nenhuma compra.</p>
+                                                </div>
+                                            );
+                                        }
+
+                                        return (
+                                            <div className="space-y-4">
+                                                {compras.map((venda) => (
+                                                    <Card key={venda.id} className="border-l-4 border-l-blue-500">
+                                                        <CardHeader className="pb-2">
+                                                            <div className="flex justify-between items-center">
+                                                                <CardTitle className="text-base">
+                                                                    Venda #{venda.id}
+                                                                </CardTitle>
+                                                                <Badge variant="outline">
+                                                                    {venda.data}
+                                                                </Badge>
+                                                            </div>
+                                                        </CardHeader>
+                                                        <CardContent>
+                                                            <div className="space-y-3">
+                                                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                                                    <div><strong>Total:</strong> {venda.total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</div>
+                                                                    <div><strong>Pagamento:</strong> {venda.metodoPagamento}</div>
+                                                                </div>
+                                                                
+                                                                <div>
+                                                                    <strong className="text-sm">Produtos:</strong>
+                                                                    <div className="mt-2">
+                                                                        <Table>
+                                                                            <TableHeader>
+                                                                                <TableRow>
+                                                                                    <TableHead className="text-xs">Produto</TableHead>
+                                                                                    <TableHead className="text-xs">Qtd.</TableHead>
+                                                                                    <TableHead className="text-xs">Preço Unit.</TableHead>
+                                                                                    <TableHead className="text-xs">Subtotal</TableHead>
+                                                                                </TableRow>
+                                                                            </TableHeader>
+                                                                            <TableBody>
+                                                                                {venda.produtos.map((produto, index) => {
+                                                                                    const preco = getProdutoPreco(produto.id);
+                                                                                    return (
+                                                                                        <TableRow key={index}>
+                                                                                            <TableCell className="text-xs">{getProdutoNome(produto.id)}</TableCell>
+                                                                                            <TableCell className="text-xs">{produto.quantidade}</TableCell>
+                                                                                            <TableCell className="text-xs">
+                                                                                                {preco.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                                            </TableCell>
+                                                                                            <TableCell className="text-xs">
+                                                                                                {(preco * produto.quantidade).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                                            </TableCell>
+                                                                                        </TableRow>
+                                                                                    );
+                                                                                })}
+                                                                            </TableBody>
+                                                                        </Table>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                                
+                                                {/* Resumo das compras */}
+                                                <Card className="bg-gray-50">
+                                                    <CardContent className="pt-6">
+                                                        <div className="grid grid-cols-3 gap-4 text-center">
+                                                            <div>
+                                                                <div className="text-2xl font-bold text-blue-600">{compras.length}</div>
+                                                                <div className="text-sm text-gray-600">Total de Compras</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-2xl font-bold text-green-600">
+                                                                    {compras.reduce((sum, venda) => sum + venda.total, 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                                                                </div>
+                                                                <div className="text-sm text-gray-600">Valor Total Gasto</div>
+                                                            </div>
+                                                            <div>
+                                                                <div className="text-2xl font-bold text-purple-600">
+                                                                    {compras.reduce((sum, venda) => sum + venda.produtos.reduce((pSum, p) => pSum + p.quantidade, 0), 0)}
+                                                                </div>
+                                                                <div className="text-sm text-gray-600">Itens Comprados</div>
+                                                            </div>
+                                                        </div>
+                                                    </CardContent>
+                                                </Card>
+                                            </div>
+                                        );
+                                    })()}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    )}
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }
