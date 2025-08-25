@@ -15,4 +15,4 @@ DER Serviços:
 
 
 
-![Imagem do WhatsApp de 2025-08-25 à(s) 15 57 59_bc4bf3d1](https://github.com/user-attachments/assets/79637966-4b08-47d2-aaa5-c1a5ad567853)
+![Imagem do WhatsApp de 2025-08-25 à(s) 16 00 02_e4297b5e](https://github.com/user-attachments/assets/09ec7cbd-73be-4e7d-a151-8073cea919ac)
