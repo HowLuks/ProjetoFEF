@@ -5,7 +5,7 @@
   "type": "module",
   "main": "electron.js",
   "scripts": {
-    "dev": "concurrently \"pnpm run vite\" \"pnpm run electron\"",
+    "dev": "concurrently \"pnpm run vite\"",
     "build": "vite build",
     "dist": "electron-builder",
     "vite": "vite",

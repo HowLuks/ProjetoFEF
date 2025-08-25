@@ -1,25 +1,22 @@
-# Imagem base
-FROM node:18
+FROM node:18 AS build
 
-# Diretório dentro do container
 WORKDIR /app
 
-# Copiar dependências
-COPY package*.json ./
+COPY package.json ./
 
-# Instalar dependências
-RUN npm install
+RUN npm install -g pnpm
+RUN pnpm install
 
-RUN pnmp install
-
-# Copiar o restante do projeto
 COPY . .
 
-# Construir (se for frontend) ou apenas rodar
-# RUN npm run build
+RUN pnpm run build
 
-# Expor a porta (exemplo: 3000)
-EXPOSE 3000
+FROM node:18
 
-# Comando de inicialização
-CMD ["pnpm", "run", "dev"]
+WORKDIR /app
+
+COPY --from=build /app /app
+
+EXPOSE 4173
+
+CMD ["npm", "run", "preview", "--", "--host", "0.0.0.0"]
