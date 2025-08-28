@@ -1,0 +1,175 @@
+body {
+    font-family: 'Arial', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5;
+    color: #333;
+}
+
+.main-layout {
+    display: flex;
+    min-height: 100vh;
+}
+
+.sidebar-container {
+    width: 250px;
+    background-color: #282a3a;
+    padding: 20px 0;
+    color: #fff;
+    flex-shrink: 0;
+}
+
+.sidebar-content {
+    padding: 0 20px;
+}
+
+.system-name-sidebar {
+    display: block;
+    font-size: 1.2rem;
+    font-weight: bold;
+    margin-bottom: 30px;
+    padding-left: 10px;
+}
+
+.menu-items {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-item {
+    display: block;
+    padding: 12px 10px;
+    color: #aaa;
+    text-decoration: none;
+    font-size: 1rem;
+    border-radius: 8px;
+    transition: background-color 0.3s;
+}
+
+.menu-item:hover {
+    background-color: #3a3c50;
+}
+
+.menu-item.active {
+    background-color: #575fe2;
+    color: #fff;
+}
+
+.content-area {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.header-container {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding: 15px 30px;
+    background-color: #fff;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.header-right-menu {
+    display: flex;
+    align-items: center;
+    gap: 25px;
+}
+
+.search-box {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e0e0e0;
+    border-radius: 20px;
+    padding: 5px 12px;
+    background-color: #f5f5f5;
+}
+
+.search-box input {
+    border: none;
+    background: transparent;
+    outline: none;
+    font-size: 14px;
+    padding: 0;
+}
+
+.search-box .icon {
+    width: 20px;
+    height: 20px;
+    fill: #888;
+    margin-right: 8px;
+}
+
+.icon-menu {
+    display: flex;
+    gap: 18px;
+}
+
+.icon-menu .icon {
+    width: 24px;
+    height: 24px;
+    fill: #555;
+    cursor: pointer;
+}
+
+.user-profile {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    cursor: pointer;
+}
+
+.user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border: 2px solid #ddd;
+}
+
+.user-name {
+    font-size: 1rem;
+    color: #333;
+}
+
+.dashboard-content {
+    padding: 30px;
+}
+
+.welcome-title {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+    margin: 0;
+}
+
+.welcome-text {
+    font-size: 1rem;
+    color: #666;
+    margin-top: 5px;
+    margin-bottom: 25px;
+}
+
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 20px;
+}
+
+.card {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
+.card h3 {
+    margin: 0 0 5px;
+    font-size: 1.2rem;
+}
+
+.card p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: #666;
+}
